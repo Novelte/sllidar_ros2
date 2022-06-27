@@ -78,6 +78,8 @@ class SLlidarNode : public rclcpp::Node
         this->declare_parameter<bool>("angle_compensate", false);
         this->declare_parameter<std::string>("scan_mode", std::string());
         this->declare_parameter<float>("scan_frequency", 20.0);
+        this->declare_parameter<float>("angle_coverage", 220);
+
         this->get_parameter("channel_type", channel_type);
         this->get_parameter("tcp_ip", tcp_ip); 
         this->get_parameter("tcp_port", tcp_port);
@@ -90,6 +92,7 @@ class SLlidarNode : public rclcpp::Node
         this->get_parameter("angle_compensate", angle_compensate);
         this->get_parameter("scan_mode", scan_mode);
         this->get_parameter("scan_frequency", scan_frequency);
+        this->get_parameter("angle_coverage", angle_coverage);
         if(channel_type == "udp")
             scan_frequency = 20.0;
         else
@@ -230,7 +233,9 @@ class SLlidarNode : public rclcpp::Node
         if (!reverse_data) {
             for (size_t i = 0; i < node_count; i++) {
                 float read_value = (float) nodes[i].dist_mm_q2/4.0f/1000;
-                if (read_value == 0.0)
+                if (i >= angle_coverage / 2 * 3 && i <= (360 - angle_coverage / 2) * 3)
+                    scan_msg->ranges[i] = std::numeric_limits<float>::infinity();
+                else if (read_value == 0.0)
                     scan_msg->ranges[i] = std::numeric_limits<float>::infinity();
                 else
                     scan_msg->ranges[i] = read_value;
@@ -239,7 +244,9 @@ class SLlidarNode : public rclcpp::Node
         } else {
             for (size_t i = 0; i < node_count; i++) {
                 float read_value = (float)nodes[i].dist_mm_q2/4.0f/1000;
-                if (read_value == 0.0)
+                if (i >= angle_coverage / 2 * 3 && i <= (360 - angle_coverage / 2) * 3)
+                    scan_msg->ranges[i] = std::numeric_limits<float>::infinity();
+                else if (read_value == 0.0)
                     scan_msg->ranges[node_count-1-i] = std::numeric_limits<float>::infinity();
                 else
                     scan_msg->ranges[node_count-1-i] = read_value;
@@ -456,6 +463,7 @@ public:
     size_t angle_compensate_multiple = 1;//it stand of angle compensate at per 1 degree
     std::string scan_mode;
     float scan_frequency;
+    float angle_coverage;
 
     ILidarDriver * drv;    
 };
